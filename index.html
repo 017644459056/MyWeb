@@ -1643,8 +1643,8 @@
         };
 
         let allCreatedAdsData = [
-            {id: 'ad_1', category: 'Autoteile', itemName: 'BMW 320i Turbolader', price: '350', text: 'Original Ersatzteil, Top Zustand.', sellerName: 'Saleh Nori', sellerAvatar: '', sellerPayPal: '', sellerIban: '', images: ['https://images.unsplash.com/photo-1486006920555-c77dce18193b?w=400']},
-            {id: 'ad_2', category: 'Multimedia', itemName: 'Headphones Pro', price: '89.99', text: 'Bluetooth 5.2, Active Noise Cancelling.', sellerName: 'Saleh Nori', sellerAvatar: '', sellerPayPal: '', sellerIban: '', images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400']}
+            {id: 'ad_1', isDemo: true, category: 'Autoteile', itemName: 'BMW 320i Turbolader', price: '350', text: 'Original Ersatzteil, Top Zustand.', sellerName: 'Saleh Nori', sellerAvatar: '', sellerPayPal: '', sellerIban: '', images: ['https://images.unsplash.com/photo-1486006920555-c77dce18193b?w=400']},
+            {id: 'ad_2', isDemo: true, category: 'Multimedia', itemName: 'Headphones Pro', price: '89.99', text: 'Bluetooth 5.2, Active Noise Cancelling.', sellerName: 'Saleh Nori', sellerAvatar: '', sellerPayPal: '', sellerIban: '', images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400']}
         ];
 
         const translations = {
@@ -1719,6 +1719,8 @@
                     // پاکسازی مقادیر آزمایشی قدیمی؛ هرگز شماره حساب نمونه را به‌عنوان IBAN واقعی نگه ندار.
                     allCreatedAdsData = allCreatedAdsData.map(ad => ({
                         ...ad,
+                        // Le riconosce anche nelle vecchie copie locali già salvate.
+                        isDemo: ad.isDemo === true || ((ad.id === 'ad_1' || ad.id === 'ad_2') && !ad.sellerId),
                         sellerPayPal: ad.sellerPayPal === 'myweb.gmbh@gmail.com' ? '' : (ad.sellerPayPal || ''),
                         sellerIban: ad.sellerIban === 'DE89 1000 0000 1234 5678 90' ? '' : (ad.sellerIban || '')
                     }));
@@ -2288,7 +2290,7 @@
         function deleteAdCard(uniqueId) {
             let langObj = translations[currentActiveLang] || translations['de'];
             const targetAd = allCreatedAdsData.find(ad => ad.id === uniqueId);
-            if (!loggedUserSession || !targetAd || !targetAd.sellerId || targetAd.sellerId !== loggedUserSession.id) { alert('Sie dürfen nur Ihre eigenen Anzeigen löschen.'); return; }
+            if (!loggedUserSession || !targetAd || (!targetAd.isDemo && (!targetAd.sellerId || targetAd.sellerId !== loggedUserSession.id))) { alert('Sie dürfen nur Ihre eigenen Anzeigen löschen.'); return; }
             if (confirm(langObj.confirmDeleteAd || "Sind Sie sicher?")) {
                 allCreatedAdsData = allCreatedAdsData.filter(ad => ad.id !== uniqueId);
                 localStorage.setItem('myWebFeedAdsData', JSON.stringify(allCreatedAdsData));
@@ -2299,7 +2301,7 @@
         function editAdCard(uniqueId) {
             let langObj = translations[currentActiveLang] || translations['de'];
             let adObj = allCreatedAdsData.find(a => a.id === uniqueId);
-            if (!loggedUserSession || !adObj || !adObj.sellerId || adObj.sellerId !== loggedUserSession.id) { alert('Sie dürfen nur Ihre eigenen Anzeigen bearbeiten.'); return; }
+            if (!loggedUserSession || !adObj || (!adObj.isDemo && (!adObj.sellerId || adObj.sellerId !== loggedUserSession.id))) { alert('Sie dürfen nur Ihre eigenen Anzeigen bearbeiten.'); return; }
 
             document.getElementById('adCategorySelect').value = adObj.category;
             document.getElementById('adItemName').value = adObj.itemName;
@@ -3187,7 +3189,8 @@
             headerBar.appendChild(heading);
 
             // مالکیت فقط با شناسهٔ کاربر Supabase بررسی می‌شود؛ نام نمایشی قابل جعل است.
-            let isOwner = !!(loggedUserSession && ad.sellerId && ad.sellerId === loggedUserSession.id);
+            // نمونه‌های آزمایشی فقط برای کاربر واردشده قابل مدیریت هستند؛ آگهی‌های واقعی فقط توسط مالکشان.
+            let isOwner = !!(loggedUserSession && (ad.isDemo === true || (ad.sellerId && ad.sellerId === loggedUserSession.id)));
 
             if (isOwner) {
                 let manageBtns = document.createElement('div');
